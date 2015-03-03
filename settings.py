@@ -9,8 +9,8 @@ USER_AGENT = 'fedvitals'
 
 ITEM_PIPELINES = {
     #'scrapy.contrib.pipeline.images.ImagesPipeline': 1,
-    '..pipelines.PhoneNormalizationPipeline':5,
-    '..pipelines.AddressNormalizationPipeline':6
+    'pipelines.pipelines.PhoneNormalizationPipeline':5,
+    'pipelines.pipelines.AddressNormalizationPipeline':6
 }
 
 #Image Download Support
