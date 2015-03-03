@@ -14,7 +14,7 @@ setup(name='Vitals',
       author='David Caraway',
       author_email='dave@fogmine.com',
       url='http://www.fogmine.com',
-      packages = ['.', 'spiders'],
+      packages = ['.', 'pipelines', 'spiders'],
       entry_points={'scrapy':['settings=settings']},
       install_requires=required
      )
