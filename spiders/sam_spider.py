@@ -1,5 +1,5 @@
-__author__ = 'dwcaraway'
 
+__author__ = 'dwcaraway'
 from scrapy.spider import Spider
 from scrapy import Request
 from scrapy.contrib.loader import ItemLoader
