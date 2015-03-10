@@ -62,7 +62,7 @@ def sync_ftp_to_s3():
 
         # Put file to S3
         k = Key(vitals_bucket)
-        k.key = '/staging/fbo/'+f
+        k.key = '/staging/fbo/'+f+'.zip'
         k.set_contents_from_filename(zipped_storage_path)
 
     fullFBOKey = vitals_bucket.get_key('/staging/fbo/FBOFullXML.xml.zip')
@@ -84,7 +84,7 @@ def sync_ftp_to_s3():
 
         print "uploading the latest full xml to S3"
         # Put file to S3
-        source_size = os.stat(storage_path).st_size
+        source_size = os.stat(zipped_storage_path).st_size
 
         # Create a multipart upload request
         mp = vitals_bucket.initiate_multipart_upload('/staging/fbo/FBOFullXML.xml.zip')
@@ -101,7 +101,7 @@ def sync_ftp_to_s3():
                 print "uploading chunk {0} of {1}".format(i, chunk_count)
                 offset = chunk_size * i
                 bytes = min(chunk_size, source_size - offset)
-                with FileChunkIO(storage_path, 'r', offset=offset,
+                with FileChunkIO(zipped_storage_path, 'r', offset=offset,
                                      bytes=bytes) as fp:
                      mp.upload_part_from_file(fp, part_num=i + 1)
         finally:
