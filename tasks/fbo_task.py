@@ -10,7 +10,7 @@ import os
 import math
 from datetime import date, timedelta, datetime
 from filechunkio import FileChunkIO
-from zipfile import ZipFile
+import zipfile
 
 # Requires environmental keys
 # AWS_ACCESS_KEY_ID - Your AWS Access Key ID
@@ -26,7 +26,7 @@ def sync_ftp_to_s3():
 
     temp_dir = mkdtemp()
 
-    conn = S3Connection('AKIAICNDXYCQQG2TWUYQ', 'nX+ECYHB8UFSU20A0Bu7uu0MVy0zsSUYSY19Kz76')
+    conn = S3Connection()
     vitals_bucket = conn.get_bucket('fogmine-data')
 
     ftp = FTP('ftp.fbo.gov')
@@ -44,28 +44,25 @@ def sync_ftp_to_s3():
     for f in daily_files:
         local_file_path = path.join(temp_dir, f)
 
-        #Connect to S3
+        #See if key already exists in S3, if so, move on
         k = vitals_bucket.get_key('/staging/fbo/'+f+'.zip')
-
         if k:
             continue
 
-        fileObj = open(local_file_path, 'wb')
-        # Download the file a chunk at a time using RETR
-        ftp.retrbinary('RETR ' + f, fileObj.write)
-        # Close the file
-        fileObj.close()
+        #Save the FTP file locally
+        with open(local_file_path, 'wb') as fileObj:
+            ftp.retrbinary('RETR ' + f, fileObj.write)
 
         zipped_storage_path = path.join(temp_dir, f+'.zip')
-        with ZipFile(zipped_storage_path, 'w') as myzip:
-            myzip.write(local_file_path)
+        with zipfile.ZipFile(zipped_storage_path, 'w', zipfile.ZIP_DEFLATED) as myzip:
+            myzip.write(local_file_path, arcname=f)
 
         # Put file to S3
         k = Key(vitals_bucket)
         k.key = '/staging/fbo/'+f+'.zip'
         k.set_contents_from_filename(zipped_storage_path)
 
-    fullFBOKey = vitals_bucket.get_key('/staging/fbo/FBOFullXML.xml.zip')
+    fullFBOKey = vitals_bucket.get_key('/staging/fbo/FBOFullXML.zip')
     if not fullFBOKey or parse_ts(fullFBOKey.last_modified) < sourceModifiedDateTime:
         #Update S3 copy with latest
 
@@ -78,16 +75,16 @@ def sync_ftp_to_s3():
             ftp.close()
 
         print "zipping the fbo full file"
-        zipped_storage_path = path.join(temp_dir, 'FBOFullXML.xml.zip')
-        with ZipFile(zipped_storage_path, 'w') as myzip:
-            myzip.write(storage_path)
+        zipped_storage_path = path.join(temp_dir, 'FBOFullXML.zip')
+        with zipfile.ZipFile(zipped_storage_path, 'w', zipfile.ZIP_DEFLATED) as myzip:
+            myzip.write(storage_path, arcname='FBOFullXML.xml')
 
         print "uploading the latest full xml to S3"
         # Put file to S3
         source_size = os.stat(zipped_storage_path).st_size
 
         # Create a multipart upload request
-        mp = vitals_bucket.initiate_multipart_upload('/staging/fbo/FBOFullXML.xml.zip')
+        mp = vitals_bucket.initiate_multipart_upload('/staging/fbo/FBOFullXML.zip')
 
         # Use a chunk size of 50 MiB (feel free to change this)
         chunk_size = 52428800
@@ -98,7 +95,7 @@ def sync_ftp_to_s3():
         # set bytes to never exceed the original file size.
         try:
             for i in range(chunk_count + 1):
-                print "uploading chunk {0} of {1}".format(i, chunk_count)
+                print "uploading chunk {0} of {1}".format(i+1, chunk_count+1)
                 offset = chunk_size * i
                 bytes = min(chunk_size, source_size - offset)
                 with FileChunkIO(zipped_storage_path, 'r', offset=offset,
