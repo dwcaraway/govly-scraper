@@ -17,7 +17,11 @@ class PhoneNormalizationPipeline:
     """Normalizes a telephone"""
 
     def process_item(self, item, spider):
+
         p_original = item.get('telephone')
+
+        if not p_original:
+            return item
 
         #Normalize telephone numbers to INTERNATIONAL format, assumes US telephone number to dial from
         try:
